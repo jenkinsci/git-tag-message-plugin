@@ -12,6 +12,7 @@
   <packaging>hpi</packaging>
 
   <name>Git Tag Message Plugin</name>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Git+Tag+Message+Plugin</url>
   <description>Exports the message for a git tag as an environment variable during a build.</description>
   <developers>
     <developer>
@@ -52,9 +53,9 @@
   </pluginRepositories>
 
   <scm>
-    <connection>scm:git:git://github.com/iosphere/git-tag-message-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:iosphere/git-tag-message-plugin.git</developerConnection>
-    <url>https://github.com/iosphere/git-tag-message-plugin</url>
+    <connection>scm:git:git://github.com/jenkinsci/git-tag-message-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:jenkinsci/git-tag-message-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/git-tag-message-plugin</url>
   </scm>
 
 </project>

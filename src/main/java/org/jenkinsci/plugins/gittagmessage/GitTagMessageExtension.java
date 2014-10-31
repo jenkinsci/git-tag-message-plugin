@@ -35,7 +35,12 @@ public class GitTagMessageExtension extends GitSCMExtension {
         }
 
         // Query information about the most recent tag reachable from this commit
-        final String tagDescription = fixEmpty(git.describe(commit));
+        String tagDescription = null;
+        try {
+            tagDescription = fixEmpty(git.describe(commit));
+        } catch (GitException e) {
+            LOGGER.finest(String.format("Fetching tag info for '%s' threw exception: %s", commit, e.getMessage()));
+        }
         if (tagDescription == null) {
             LOGGER.finest(String.format("No tag info could be found for '%s'; will not fetch tag message.", commit));
             return;

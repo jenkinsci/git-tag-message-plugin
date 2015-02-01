@@ -5,8 +5,10 @@ import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.plugins.git.GitException;
 import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.Revision;
 import hudson.plugins.git.extensions.GitSCMExtension;
 import hudson.plugins.git.extensions.GitSCMExtensionDescriptor;
+import hudson.plugins.git.util.BuildData;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -27,41 +29,61 @@ public class GitTagMessageExtension extends GitSCMExtension {
     @Override
     public void onCheckoutCompleted(GitSCM scm, AbstractBuild<?, ?> build, GitClient git, BuildListener listener)
             throws IOException, InterruptedException, GitException {
-        // Now that checkout is complete, grab the commit that we'll be working with
-        final String commit = build.getEnvironment(listener).get(GitSCM.GIT_COMMIT);
-        if (commit == null) {
-            LOGGER.finest("GIT_COMMIT is not set; will not search for git tag message.");
+        // Now that checkout is complete, grab the commit info that we'll be working with
+        BuildData buildData = build.getAction(BuildData.class);
+        if (buildData == null || buildData.getLastBuiltRevision() == null) {
+            LOGGER.info("Git build information is not set; will not search for git tag message.");
             return;
         }
 
+        Revision revision = buildData.getLastBuiltRevision();
+        String commit = revision.getSha1String();
+        String branch = revision.getBranches().iterator().next().getName();
+
+        // If the refspec used explicitly searches for tags, then we should use the tag name that triggered this build.
+        // If we don't do this, i.e. we just run "git describe" on the commit hash, it may return a different, newer tag
+        String tagName;
+        if (branch.contains("/tags/")) {
+            int index = branch.indexOf("/tags/");
+            tagName = branch.substring(index + "/tags/".length());
+        } else {
+            // This build was triggered for a named branch, or for a particular commit hash
+            tagName = getTagName(git, commit);
+        }
+
+        // Retrieve the tag message for the given tag name, then store it
+        try {
+            String tagMessage = git.getTagMessage(tagName); // "git tag -l <tag> -n10000"
+            build.addAction(new GitTagMessageAction(tagMessage));
+            LOGGER.finest(String.format("Exporting tag message '%s'.", tagMessage));
+        } catch (StringIndexOutOfBoundsException e) {
+            // git-client currently throws this exception if you ask for the message of a non-existent tag
+            LOGGER.info(String.format("No tag message exists for '%s'.", tagName));
+        }
+    }
+
+    /** @return Tag name associated with the given commit, or {@code null} if there is none. */
+    private static String getTagName(GitClient git, String commit) throws InterruptedException {
         // Query information about the most recent tag reachable from this commit
         String tagDescription = null;
         try {
-            tagDescription = fixEmpty(git.describe(commit));
+            // This should return a tag name (e.g. "beta42") or the nearest tag name and an offset ("beta42-5-g123abcd")
+            tagDescription = fixEmpty(git.describe(commit)); // "git describe --tags <commit>"
         } catch (GitException e) {
-            LOGGER.finest(String.format("Fetching tag info for '%s' threw exception: %s", commit, e.getMessage()));
+            LOGGER.warning(String.format("Fetching tag info for '%s' threw exception: %s", commit, e.getMessage()));
         }
         if (tagDescription == null) {
-            LOGGER.finest(String.format("No tag info could be found for '%s'; will not fetch tag message.", commit));
-            return;
+            LOGGER.fine(String.format("No tag info could be found for '%s'; will not fetch tag message.", commit));
+            return null;
         }
 
-        // If we get a tag name, but with an offset, that means that the tag name returned belongs to another commit
+        // If "git describe" returns a value with offset, then this particular commit has no tag pointing to it
         if (tagDescription.matches(".+-[0-9]+-g[0-9A-Fa-f]{7}$")) {
-            LOGGER.finest(String.format("Commit '%s' has no tag associated; will not fetch tag message.", commit));
-            return;
+            LOGGER.fine(String.format("Commit '%s' has no tag associated; will not fetch tag message.", commit));
+            return null;
         }
 
-        // Retrieve the tag message for the given tag name from git, then store it
-        String tagMessage = null;
-        try {
-            tagMessage = git.getTagMessage(tagDescription);
-        } catch (StringIndexOutOfBoundsException e) {
-            // git-client currently throws this exception if you ask for the message of a non-existent tag
-            LOGGER.info(String.format("No tag message exists for '%s'.", tagDescription));
-        }
-        build.addAction(new GitTagMessageAction(tagMessage));
-        LOGGER.finest(String.format("Exporting tag message '%s'.", tagMessage));
+        return tagDescription;
     }
 
     @Extension

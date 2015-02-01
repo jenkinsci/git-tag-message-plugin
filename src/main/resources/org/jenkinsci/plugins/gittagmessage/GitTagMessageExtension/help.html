@@ -1,9 +1,20 @@
 <div>
   If the revision checked out has a git tag associated with it, and a message
   was specified when creating the tag, then that message will be exported during
-  the build as the <tt>GIT_TAG_MESSAGE</tt> environment variable.
+  the build as the <strong><tt>GIT_TAG_MESSAGE</tt></strong> environment
+  variable.<br/>If no tag message was specified, the commit message will be used.
   <p/>
   If the revision has more than one tag associated with it, only the most recent
-  tag will be taken into account. For this reason, if you're using the "Create a
-  tag for every build" behaviour, make sure that it occurs after this behaviour.
+  tag will be taken into account, <strong>unless</strong> the refspec contains
+  "refs/tags/" &mdash; i.e. builds are only triggered when certain tag names or
+  patterns are matched &mdash; in which case the exact tag name that triggered
+  the build will be used, even if it's not the most recent tag for this commit.
+  <br/>
+  For this reason, if you're not using a tag-specific refspec but you
+  <em>are</em> using the "Create a tag for every build" behaviour, you should
+  make sure that the build-tagging behaviour is configured to run <em>after</em>
+  this "export git tag message" behaviour.
+  <p/>
+  Tag and commit messages which span multiple lines are no problem, though only
+  the first 10000 lines of a tag's message will be exported.
 </div>

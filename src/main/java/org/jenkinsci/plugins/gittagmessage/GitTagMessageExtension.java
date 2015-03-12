@@ -13,10 +13,12 @@ import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.logging.Logger;
 
 import static hudson.Util.fixEmpty;
 import static hudson.Util.fixEmptyAndTrim;
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME;
 
 public class GitTagMessageExtension extends GitSCMExtension {
 
@@ -51,6 +53,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             // This build was triggered for a named branch, or for a particular commit hash
             tagName = getTagName(git, commit);
             if (tagName == null) {
+                listener.getLogger().println(Messages.NoTagFound());
                 return;
             }
         }
@@ -58,8 +61,16 @@ public class GitTagMessageExtension extends GitSCMExtension {
         // Retrieve the tag message for the given tag name, then store it
         try {
             String tagMessage = git.getTagMessage(tagName); // "git tag -l <tag> -n10000"
-            build.addAction(new GitTagMessageAction(tagMessage));
-            LOGGER.finest(String.format("Exporting tag message '%s'.", tagMessage));
+            // Empty or whitespace-only values aren't exported to the environment by Jenkins, so we can trim the message
+            tagMessage = fixEmptyAndTrim(tagMessage);
+            if (tagMessage == null) {
+                listener.getLogger().println(Messages.NoTagMessageFound(tagName));
+                LOGGER.finest(String.format("No tag message could be determined for git tag '%s'.", tagName));
+            } else {
+                build.addAction(new GitTagMessageAction(tagMessage));
+                listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME, tagName));
+                LOGGER.finest(String.format("Exporting tag message '%s' from tag '%s'.", tagMessage, tagName));
+            }
         } catch (StringIndexOutOfBoundsException e) {
             // git-client currently throws this exception if you ask for the message of a non-existent tag
             LOGGER.info(String.format("No tag message exists for '%s'.", tagName));

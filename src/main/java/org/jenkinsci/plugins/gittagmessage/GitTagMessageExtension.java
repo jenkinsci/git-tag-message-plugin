@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 import static hudson.Util.fixEmpty;
+import static hudson.Util.fixEmptyAndTrim;
 
 public class GitTagMessageExtension extends GitSCMExtension {
 
@@ -49,6 +50,9 @@ public class GitTagMessageExtension extends GitSCMExtension {
         } else {
             // This build was triggered for a named branch, or for a particular commit hash
             tagName = getTagName(git, commit);
+            if (tagName == null) {
+                return;
+            }
         }
 
         // Retrieve the tag message for the given tag name, then store it
@@ -70,6 +74,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             // This should return a tag name (e.g. "beta42") or the nearest tag name and an offset ("beta42-5-g123abcd")
             tagDescription = fixEmpty(git.describe(commit)); // "git describe --tags <commit>"
         } catch (GitException e) {
+            // If there are no tags nearby, git returns a non-zero exit code, which throws this exception
             LOGGER.warning(String.format("Fetching tag info for '%s' threw exception: %s", commit, e.getMessage()));
         }
         if (tagDescription == null) {
@@ -83,7 +88,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             return null;
         }
 
-        return tagDescription;
+        return fixEmptyAndTrim(tagDescription);
     }
 
     @Extension

@@ -67,7 +67,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
                 listener.getLogger().println(Messages.NoTagMessageFound(tagName));
                 LOGGER.finest(String.format("No tag message could be determined for git tag '%s'.", tagName));
             } else {
-                build.addAction(new GitTagMessageAction(tagMessage));
+                build.addAction(new GitTagMessageAction(tagName,tagMessage));
                 listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME, tagName));
                 LOGGER.finest(String.format("Exporting tag message '%s' from tag '%s'.", tagMessage, tagName));
             }

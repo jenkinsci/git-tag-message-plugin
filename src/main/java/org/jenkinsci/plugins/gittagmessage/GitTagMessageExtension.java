@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 
 import static hudson.Util.fixEmpty;
 import static hudson.Util.fixEmptyAndTrim;
-import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME;
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_MESSAGE;
 
 public class GitTagMessageExtension extends GitSCMExtension {
 
@@ -58,7 +58,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             }
         }
 
-        // Retrieve the tag message for the given tag name, then store it
+        // Retrieve the tag message for the given tag name, then store them both as env variables
         try {
             String tagMessage = git.getTagMessage(tagName); // "git tag -l <tag> -n10000"
             // Empty or whitespace-only values aren't exported to the environment by Jenkins, so we can trim the message
@@ -67,17 +67,24 @@ public class GitTagMessageExtension extends GitSCMExtension {
                 listener.getLogger().println(Messages.NoTagMessageFound(tagName));
                 LOGGER.finest(String.format("No tag message could be determined for git tag '%s'.", tagName));
             } else {
-                build.addAction(new GitTagMessageAction(tagName,tagMessage));
-                listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME, tagName));
+                listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME_MESSAGE, tagName));
                 LOGGER.finest(String.format("Exporting tag message '%s' from tag '%s'.", tagMessage, tagName));
             }
+
+            listener.getLogger().println(Messages.ExportingTagName(tagName, GitTagMessageAction.ENV_VAR_NAME_TAG));
+            LOGGER.finest(String.format("Exporting git-tag '%s'", tagName));
+
+            build.addAction(new GitTagMessageAction(tagName, tagMessage));
         } catch (StringIndexOutOfBoundsException e) {
             // git-client currently throws this exception if you ask for the message of a non-existent tag
             LOGGER.info(String.format("No tag message exists for '%s'.", tagName));
         }
     }
 
-    /** @return Tag name associated with the given commit, or {@code null} if there is none. */
+    /**
+     * @return Tag name associated with the given commit, or {@code null} if
+     * there is none.
+     */
     private static String getTagName(GitClient git, String commit) throws InterruptedException {
         // Query information about the most recent tag reachable from this commit
         String tagDescription = null;
@@ -104,6 +111,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
 
     @Extension
     public static class DescriptorImpl extends GitSCMExtensionDescriptor {
+
         @Override
         public String getDisplayName() {
             return Messages.DisplayName();

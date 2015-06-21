@@ -1,8 +1,12 @@
 <div>
-  If the revision checked out has a git tag associated with it, and a message
-  was specified when creating the tag, then that message will be exported during
-  the build as the <strong><tt>GIT_TAG_MESSAGE</tt></strong> environment
-  variable.<br/>If no tag message was specified, the commit message will be used.
+  If the revision checked out has a git tag associated with it, the tag name
+  will be exported during the build as <strong><tt>GIT_TAG_NAME</tt></strong>.
+  <br/>
+  If a message was specified when creating the tag, then that message will be
+  exported during the build as the <strong><tt>GIT_TAG_MESSAGE</tt></strong>
+  environment variable.
+  <br/>
+  If no tag message was specified, the commit message will be used.
   <p/>
   If the revision has more than one tag associated with it, only the most recent
   tag will be taken into account, <strong>unless</strong> the refspec contains

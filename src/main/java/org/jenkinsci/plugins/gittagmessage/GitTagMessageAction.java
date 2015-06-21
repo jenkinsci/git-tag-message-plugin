@@ -7,18 +7,26 @@ import hudson.model.EnvironmentContributingAction;
 /** Exports the message text associated with a git tag used for a build. */
 public class GitTagMessageAction implements EnvironmentContributingAction {
 
-    /** The name of the environment variable this plugin exports. */
-    static final String ENV_VAR_NAME = "GIT_TAG_MESSAGE";
+    /** The name of the environment variable this plugin exports for a git tag message. */
+    static final String ENV_VAR_NAME_MESSAGE = "GIT_TAG_MESSAGE";
+
+    /** The name of the environment variable this plugin exports for a git tag name. */
+    static final String ENV_VAR_NAME_TAG = "GIT_TAG_NAME";
 
     private final String tagMessage;
+    private final String tagName;
 
-    public GitTagMessageAction(String tagMessage) {
+    public GitTagMessageAction(String tagName, String tagMessage) {
         this.tagMessage = tagMessage;
+        this.tagName = tagName;
     }
 
     public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars env) {
         if (tagMessage != null) {
-            env.put(ENV_VAR_NAME, tagMessage);
+            env.put(ENV_VAR_NAME_MESSAGE, tagMessage);
+        }
+        if (tagName != null) {
+            env.put(ENV_VAR_NAME_TAG, tagName);
         }
     }
 

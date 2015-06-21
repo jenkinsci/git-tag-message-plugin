@@ -13,12 +13,12 @@ import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.logging.Logger;
 
 import static hudson.Util.fixEmpty;
 import static hudson.Util.fixEmptyAndTrim;
-import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME;
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_MESSAGE;
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_TAG;
 
 public class GitTagMessageExtension extends GitSCMExtension {
 
@@ -58,7 +58,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             }
         }
 
-        // Retrieve the tag message for the given tag name, then store it
+        // Attempt to retrieve the tag message for the discovered tag name
         try {
             String tagMessage = git.getTagMessage(tagName); // "git tag -l <tag> -n10000"
             // Empty or whitespace-only values aren't exported to the environment by Jenkins, so we can trim the message
@@ -67,10 +67,16 @@ public class GitTagMessageExtension extends GitSCMExtension {
                 listener.getLogger().println(Messages.NoTagMessageFound(tagName));
                 LOGGER.finest(String.format("No tag message could be determined for git tag '%s'.", tagName));
             } else {
-                build.addAction(new GitTagMessageAction(tagMessage));
-                listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME, tagName));
+                listener.getLogger().println(Messages.ExportingTagMessage(ENV_VAR_NAME_MESSAGE, tagName));
                 LOGGER.finest(String.format("Exporting tag message '%s' from tag '%s'.", tagMessage, tagName));
             }
+
+            // Always export the tag name itself
+            listener.getLogger().println(Messages.ExportingTagName(ENV_VAR_NAME_TAG, tagName));
+            LOGGER.finest(String.format("Exporting git tag name '%s'", tagName));
+
+            // Add the action which will export the variables
+            build.addAction(new GitTagMessageAction(tagName, tagMessage));
         } catch (StringIndexOutOfBoundsException e) {
             // git-client currently throws this exception if you ask for the message of a non-existent tag
             LOGGER.info(String.format("No tag message exists for '%s'.", tagName));

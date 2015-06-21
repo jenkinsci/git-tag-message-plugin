@@ -22,6 +22,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.IOException;
 import java.util.Collections;
 
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_MESSAGE;
+import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_TAG;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -50,8 +52,8 @@ public class GitTagMessageExtensionTest {
         FreeStyleProject job = configureGitTagMessageJob();
         buildJobAndAssertSuccess(job);
 
-        // Then no git tag message should have been exported
-        assertBuildEnvironment(job, null);
+        // Then no git tag information should have been exported
+        assertBuildEnvironment(job, null, null);
     }
 
     @Test
@@ -64,8 +66,8 @@ public class GitTagMessageExtensionTest {
         FreeStyleProject job = configureGitTagMessageJob();
         buildJobAndAssertSuccess(job);
 
-        // Then a git tag message should not have been exported
-        assertBuildEnvironment(job, null);
+        // Then the git tag name message, but no message should have been exported
+        assertBuildEnvironment(job, "release-1.0", null);
     }
 
     @Test
@@ -79,7 +81,7 @@ public class GitTagMessageExtensionTest {
         buildJobAndAssertSuccess(job);
 
         // Then the (trimmed) git tag message should have been exported
-        assertBuildEnvironment(job, "This is the first release.");
+        assertBuildEnvironment(job, "release-1.0", "This is the first release.");
     }
 
     @Test
@@ -94,8 +96,8 @@ public class GitTagMessageExtensionTest {
         FreeStyleProject job = configureGitTagMessageJob();
         buildJobAndAssertSuccess(job);
 
-        // Then the most recent tag message should have been exported
-        assertBuildEnvironment(job, "This is the first release.");
+        // Then the most recent tag info should have been exported
+        assertBuildEnvironment(job, "release-1.0", "This is the first release.");
     }
 
     @Test
@@ -110,12 +112,12 @@ public class GitTagMessageExtensionTest {
         FreeStyleProject job = configureGitTagMessageJob("+refs/tags/beta/*:refs/remotes/origin/tags/beta/*", "*/tags/beta/*");
         buildJobAndAssertSuccess(job);
 
-        // Then the selected tag message should be exported, even although it's not the latest tag
-        assertBuildEnvironment(job, "Beta #1");
+        // Then the selected tag info should be exported, even although it's not the latest tag
+        assertBuildEnvironment(job, "beta/1", "Beta #1");
     }
 
     /** Asserts that the most recent build of the given job exported a tag message, or not exported if {@code null}. */
-    private static void assertBuildEnvironment(FreeStyleProject job, String expectedTagMessage) {
+    private static void assertBuildEnvironment(FreeStyleProject job, String expectedTagName, String expectedTagMessage) {
         EnvVars env = null;
         for (Builder b : job.getBuilders()) {
             if (b instanceof CaptureEnvironmentBuilder) {
@@ -124,10 +126,16 @@ public class GitTagMessageExtensionTest {
             }
         }
 
-        if (expectedTagMessage == null) {
-            assertFalse(env.containsKey(GitTagMessageAction.ENV_VAR_NAME));
+        if (expectedTagName == null) {
+            assertFalse(env.containsKey(ENV_VAR_NAME_TAG));
         } else {
-            assertEquals(expectedTagMessage, env.get(GitTagMessageAction.ENV_VAR_NAME));
+            assertEquals(expectedTagName, env.get(ENV_VAR_NAME_TAG));
+        }
+
+        if (expectedTagMessage == null) {
+            assertFalse(env.containsKey(ENV_VAR_NAME_MESSAGE));
+        } else {
+            assertEquals(expectedTagMessage, env.get(ENV_VAR_NAME_MESSAGE));
         }
     }
 

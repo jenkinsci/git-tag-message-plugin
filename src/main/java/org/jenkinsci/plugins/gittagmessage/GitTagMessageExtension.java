@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.gittagmessage;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.plugins.git.Branch;
 import hudson.plugins.git.GitException;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.Revision;
@@ -13,6 +14,7 @@ import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.logging.Logger;
 
 import static hudson.Util.fixEmpty;
@@ -41,14 +43,24 @@ public class GitTagMessageExtension extends GitSCMExtension {
 
         Revision revision = buildData.getLastBuiltRevision();
         String commit = revision.getSha1String();
-        String branch = revision.getBranches().iterator().next().getName();
+        Collection<Branch> branches = revision.getBranches();
+
+        // Try and get the branch name; this may be null if the repo is in a detached HEAD state.
+        // If we can't get it, it's no problem; we'll look for a tag associated with the commit hash
+        String branchName = null;
+        if (branches != null && !branches.isEmpty()) {
+            Branch branch = branches.iterator().next();
+            if (branch != null) {
+                branchName = branch.getName();
+            }
+        }
 
         // If the refspec used explicitly searches for tags, then we should use the tag name that triggered this build.
         // If we don't do this, i.e. we just run "git describe" on the commit hash, it may return a different, newer tag
         String tagName;
-        if (branch.contains("/tags/")) {
-            int index = branch.indexOf("/tags/");
-            tagName = branch.substring(index + "/tags/".length());
+        if (branchName != null && branchName.contains("/tags/")) {
+            int index = branchName.indexOf("/tags/");
+            tagName = branchName.substring(index + "/tags/".length());
         } else {
             // This build was triggered for a named branch, or for a particular commit hash
             tagName = getTagName(git, commit);

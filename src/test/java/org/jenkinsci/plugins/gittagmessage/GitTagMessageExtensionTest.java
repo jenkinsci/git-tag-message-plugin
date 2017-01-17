@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.gittagmessage;
 
-import hudson.EnvVars;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.git.BranchSpec;
@@ -9,14 +8,13 @@ import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
 import hudson.plugins.git.util.BuildData;
-import hudson.tasks.Builder;
+import hudson.tasks.Shell;
 import org.jenkinsci.plugins.gitclient.Git;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.IOException;
@@ -24,8 +22,6 @@ import java.util.Collections;
 
 import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_MESSAGE;
 import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NAME_TAG;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 public class GitTagMessageExtensionTest {
@@ -50,10 +46,10 @@ public class GitTagMessageExtensionTest {
 
         // When a build is executed
         FreeStyleProject job = configureGitTagMessageJob();
-        buildJobAndAssertSuccess(job);
+        FreeStyleBuild build = buildJobAndAssertSuccess(job);
 
         // Then no git tag information should have been exported
-        assertBuildEnvironment(job, null, null);
+        assertBuildEnvironment(build, null, null);
     }
 
     @Test
@@ -64,10 +60,10 @@ public class GitTagMessageExtensionTest {
 
         // When a build is executed
         FreeStyleProject job = configureGitTagMessageJob();
-        buildJobAndAssertSuccess(job);
+        FreeStyleBuild build = buildJobAndAssertSuccess(job);
 
         // Then the git tag name message, but no message should have been exported
-        assertBuildEnvironment(job, "release-1.0", null);
+        assertBuildEnvironment(build, "release-1.0", null);
     }
 
     @Test
@@ -78,10 +74,10 @@ public class GitTagMessageExtensionTest {
 
         // When a build is executed
         FreeStyleProject job = configureGitTagMessageJob();
-        buildJobAndAssertSuccess(job);
+        FreeStyleBuild build = buildJobAndAssertSuccess(job);
 
         // Then the (trimmed) git tag message should have been exported
-        assertBuildEnvironment(job, "release-1.0", "This is the first release.");
+        assertBuildEnvironment(build, "release-1.0", "This is the first release.");
     }
 
     @Test
@@ -94,10 +90,10 @@ public class GitTagMessageExtensionTest {
 
         // When a build is executed
         FreeStyleProject job = configureGitTagMessageJob();
-        buildJobAndAssertSuccess(job);
+        FreeStyleBuild build = buildJobAndAssertSuccess(job);
 
         // Then the most recent tag info should have been exported
-        assertBuildEnvironment(job, "release-1.0", "This is the first release.");
+        assertBuildEnvironment(build, "release-1.0", "This is the first release.");
     }
 
     @Test
@@ -109,34 +105,19 @@ public class GitTagMessageExtensionTest {
         repo.tag("gamma/1", "Gamma #1");
 
         // When a build is executed which is configured to only build beta/* tags
-        FreeStyleProject job = configureGitTagMessageJob("+refs/tags/beta/*:refs/remotes/origin/tags/beta/*", "*/tags/beta/*");
-        buildJobAndAssertSuccess(job);
+        FreeStyleProject job = configureGitTagMessageJob("+refs/tags/beta/*:refs/remotes/origin/tags/beta/*",
+                "*/tags/beta/*");
+        FreeStyleBuild build = buildJobAndAssertSuccess(job);
 
         // Then the selected tag info should be exported, even although it's not the latest tag
-        assertBuildEnvironment(job, "beta/1", "Beta #1");
+        assertBuildEnvironment(build, "beta/1", "Beta #1");
     }
 
-    /** Asserts that the most recent build of the given job exported a tag message, or not exported if {@code null}. */
-    private static void assertBuildEnvironment(FreeStyleProject job, String expectedTagName, String expectedTagMessage) {
-        EnvVars env = null;
-        for (Builder b : job.getBuilders()) {
-            if (b instanceof CaptureEnvironmentBuilder) {
-                env = ((CaptureEnvironmentBuilder) b).getEnvVars();
-                break;
-            }
-        }
-
-        if (expectedTagName == null) {
-            assertFalse(env.containsKey(ENV_VAR_NAME_TAG));
-        } else {
-            assertEquals(expectedTagName, env.get(ENV_VAR_NAME_TAG));
-        }
-
-        if (expectedTagMessage == null) {
-            assertFalse(env.containsKey(ENV_VAR_NAME_MESSAGE));
-        } else {
-            assertEquals(expectedTagMessage, env.get(ENV_VAR_NAME_MESSAGE));
-        }
+    /** Asserts that the given build exported tag information, or not, if {@code null}. */
+    private void assertBuildEnvironment(FreeStyleBuild build, String expectedName, String expectedMessage)
+            throws Exception {
+        jenkins.assertLogContains(String.format("tag='%s'", expectedName == null ? "" : expectedName), build);
+        jenkins.assertLogContains(String.format("msg='%s'", expectedMessage == null ? "" : expectedMessage), build);
     }
 
     /**
@@ -146,16 +127,8 @@ public class GitTagMessageExtensionTest {
      * @return The build that was executed.
      */
     private FreeStyleBuild buildJobAndAssertSuccess(FreeStyleProject job) throws Exception {
-        // Schedule build
-        FreeStyleBuild build = job.scheduleBuild2(0).get();
-
-        // Wait for it to complete
-        jenkins.waitUntilNoActivity();
-
-        // Assert that it was successful and git data was stored
-        jenkins.assertBuildStatusSuccess(build);
+        FreeStyleBuild build = jenkins.buildAndAssertSuccess(job);
         assertNotNull(build.getAction(BuildData.class));
-
         return build;
     }
 
@@ -179,7 +152,8 @@ public class GitTagMessageExtensionTest {
                 Collections.<GitSCMExtension>singletonList(new GitTagMessageExtension()));
 
         FreeStyleProject job = jenkins.createFreeStyleProject();
-        job.getBuildersList().add(new CaptureEnvironmentBuilder());
+        job.getBuildersList().add(new Shell("echo \"tag='${" + ENV_VAR_NAME_TAG + "}'\""));
+        job.getBuildersList().add(new Shell("echo \"msg='${" + ENV_VAR_NAME_MESSAGE + "}'\""));
         job.setScm(scm);
         return job;
     }

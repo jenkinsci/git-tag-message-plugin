@@ -26,13 +26,14 @@ public abstract class AbstractGitTagMessageExtensionTest<J extends Job<J, R>, R 
     /**
      * @param refSpec The refspec to check out.
      * @param branchSpec The branch spec to build.
+     * @param useMostRecentTag true to use the most recent tag rather than the exact one.
      * @return A job configured with the test Git repo, given settings, and the Git Tag Message extension.
      */
-    protected abstract J configureGitTagMessageJob(String refSpec, String branchSpec) throws Exception;
+    protected abstract J configureGitTagMessageJob(String refSpec, String branchSpec, boolean useMostRecentTag) throws Exception;
 
     /** @return A job configured with the test Git repo, default settings, and the Git Tag Message extension. */
     private J configureGitTagMessageJob() throws Exception {
-        return configureGitTagMessageJob("", "**");
+        return configureGitTagMessageJob("", "**", false);
     }
 
     /** Asserts that the given build exported tag information, or not, if {@code null}. */
@@ -112,11 +113,42 @@ public abstract class AbstractGitTagMessageExtensionTest<J extends Job<J, R>, R 
 
         // When a build is executed which is configured to only build beta/* tags
         J job = configureGitTagMessageJob("+refs/tags/beta/*:refs/remotes/origin/tags/beta/*",
-                "*/tags/beta/*");
+                "*/tags/beta/*", false);
         R run = buildJobAndAssertSuccess(job);
 
         // Then the selected tag info should be exported, even although it's not the latest tag
         assertBuildEnvironment(run, "beta/1", "Beta #1");
+    }
+
+    @Test
+    public void commitWithTagOnPreviousCommitWithConfigurationOptInShouldExportThatTagMessage() throws Exception {
+        // Given a git repo which has been tagged on a previous commit
+        repo.commit("commit 1");
+        repo.tag("release-1.0", "This is the first release");
+        repo.commit("commit 2");
+
+        // When a build is executed
+        J job = configureGitTagMessageJob("", "**", true);
+        R run = buildJobAndAssertSuccess(job);
+
+        // Then the git tag name message should be exported, even it is not on the current commit
+        assertBuildEnvironment(run, "release-1.0", "This is the first release");
+    }
+
+    @Test
+    public void commitWithMultipleTagsOnPreviousCommitWithConfigurationOptInShouldExportThatTagMessage() throws Exception {
+        // Given a git repo which has been tagged on a previous commit with multiple tags
+        repo.commit("commit 1");
+        repo.tag("release-candidate-1.0", "This is the first release candidate.");
+        repo.tag("release-1.0", "This is the first release.");
+        repo.commit("commit 2");
+
+        // When a build is executed
+        J job = configureGitTagMessageJob("", "**", true);
+        R run = buildJobAndAssertSuccess(job);
+
+        // Then the most recent git tag name message should be exported, even it is not on the current commit
+        assertBuildEnvironment(run, "release-1.0", "This is the first release.");
     }
 
     /**

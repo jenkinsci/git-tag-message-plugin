@@ -14,16 +14,17 @@ public class GitTagMessageExtensionPipelineTest extends AbstractGitTagMessageExt
     /**
      * @param refSpec The refspec to check out.
      * @param branchSpec The branch spec to build.
+     * @param useMostRecentTag true to use the most recent tag rather than the exact one.
      * @return A job configured with the test Git repo, given settings, and the Git Tag Message extension.
      */
-    protected WorkflowJob configureGitTagMessageJob(String refSpec, String branchSpec) throws Exception {
+    protected WorkflowJob configureGitTagMessageJob(String refSpec, String branchSpec, boolean useMostRecentTag) throws Exception {
         String gitStep = String.format(
             "checkout([$class: 'GitSCM', "
                 + "userRemoteConfigs: [[url: '%s', refspec: '%s']], "
                 + "branches: [[name: '%s']], "
-                + "extensions: [[$class: 'GitTagMessageExtension']]"
+                + "extensions: [[$class: 'GitTagMessageExtension', useMostRecentTag: %b]]"
                 + "])",
-            repoDir.getRoot().getAbsolutePath(), refSpec, branchSpec);
+            repoDir.getRoot().getAbsolutePath(), refSpec, branchSpec, useMostRecentTag);
 
         WorkflowJob job = jenkins.createProject(WorkflowJob.class, "j");
         job.setDefinition(new CpsFlowDefinition(""

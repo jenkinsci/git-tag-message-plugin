@@ -7,6 +7,10 @@
   environment variable.
   <br/>
   If no tag message was specified, the commit message will be used.
+  <br/>
+  If you ticked the <strong>Use most recent tag</strong> option, and the revision checked out has
+  no git tag associated with it, the parent commits will be searched for a git tag,
+  and the rules stated above will apply to the first parent commit with a git tag.
   <p/>
   If the revision has more than one tag associated with it, only the most recent
   tag will be taken into account, <strong>unless</strong> the refspec contains

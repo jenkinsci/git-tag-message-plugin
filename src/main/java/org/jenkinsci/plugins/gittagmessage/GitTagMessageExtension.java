@@ -42,8 +42,14 @@ public class GitTagMessageExtension extends GitSCMExtension {
         }
 
         Revision revision = buildData.getLastBuiltRevision();
-        String commit = revision.getSha1String();
-        Collection<Branch> branches = revision.getBranches();
+        String commit = null;
+        Collection<Branch> branches = null;
+        if (revision != null) {
+            commit = revision.getSha1String();
+            if (commit != null) {
+                branches = revision.getBranches();
+            }
+        }
 
         // Try and get the branch name; this may be null if the repo is in a detached HEAD state.
         // If we can't get it, it's no problem; we'll look for a tag associated with the commit hash

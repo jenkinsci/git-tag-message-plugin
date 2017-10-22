@@ -1,8 +1,8 @@
 package org.jenkinsci.plugins.gittagmessage;
 
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.plugins.git.Branch;
 import hudson.plugins.git.GitException;
 import hudson.plugins.git.GitSCM;
@@ -12,10 +12,13 @@ import hudson.plugins.git.extensions.GitSCMExtensionDescriptor;
 import hudson.plugins.git.util.BuildData;
 import org.jenkinsci.plugins.gitclient.GitClient;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static hudson.Util.fixEmpty;
 import static hudson.Util.fixEmptyAndTrim;
@@ -25,14 +28,26 @@ import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NA
 public class GitTagMessageExtension extends GitSCMExtension {
 
     private static final Logger LOGGER = Logger.getLogger(GitTagMessageExtension.class.getName());
+    private static final Pattern TAG_OFFSET_MATCHER = Pattern.compile("(?<tag>.+)-[0-9]+-g[0-9A-Fa-f]{7}$");
+
+    private boolean useMostRecentTag;
 
     @DataBoundConstructor
     public GitTagMessageExtension() {
         // No configuration options
     }
 
+    @DataBoundSetter
+    public void setUseMostRecentTag(boolean value) {
+        useMostRecentTag = value;
+    }
+
+    public boolean isUseMostRecentTag() {
+        return useMostRecentTag;
+    }
+
     @Override
-    public void onCheckoutCompleted(GitSCM scm, AbstractBuild<?, ?> build, GitClient git, BuildListener listener)
+    public void onCheckoutCompleted(GitSCM scm, Run<?, ?> build, GitClient git, TaskListener listener)
             throws IOException, InterruptedException, GitException {
         // Now that checkout is complete, grab the commit info that we'll be working with
         BuildData buildData = build.getAction(BuildData.class);
@@ -69,7 +84,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
             tagName = branchName.substring(index + "/tags/".length());
         } else {
             // This build was triggered for a named branch, or for a particular commit hash
-            tagName = getTagName(git, commit);
+            tagName = getTagName(git, commit, useMostRecentTag);
             if (tagName == null) {
                 listener.getLogger().println(Messages.NoTagFound());
                 return;
@@ -102,7 +117,7 @@ public class GitTagMessageExtension extends GitSCMExtension {
     }
 
     /** @return Tag name associated with the given commit, or {@code null} if there is none. */
-    private static String getTagName(GitClient git, String commit) throws InterruptedException {
+    private static String getTagName(GitClient git, String commit, boolean allowOffsetedTags) throws InterruptedException {
         // Query information about the most recent tag reachable from this commit
         String tagDescription = null;
         try {
@@ -118,9 +133,14 @@ public class GitTagMessageExtension extends GitSCMExtension {
         }
 
         // If "git describe" returns a value with offset, then this particular commit has no tag pointing to it
-        if (tagDescription.matches(".+-[0-9]+-g[0-9A-Fa-f]{7}$")) {
-            LOGGER.fine(String.format("Commit '%s' has no tag associated; will not fetch tag message.", commit));
-            return null;
+        Matcher m = TAG_OFFSET_MATCHER.matcher(tagDescription);
+        if (m.matches()) {
+            if (allowOffsetedTags) {
+                tagDescription = m.group("tag");
+            } else {
+                LOGGER.fine(String.format("Commit '%s' has no tag associated; will not fetch tag message.", commit));
+                return null;
+            }
         }
 
         return fixEmptyAndTrim(tagDescription);
@@ -133,5 +153,4 @@ public class GitTagMessageExtension extends GitSCMExtension {
             return Messages.DisplayName();
         }
     }
-
 }

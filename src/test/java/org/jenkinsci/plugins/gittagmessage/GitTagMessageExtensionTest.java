@@ -24,13 +24,15 @@ public class GitTagMessageExtensionTest extends AbstractGitTagMessageExtensionTe
      * @return A job configured with the test Git repo, given settings, and the Git Tag Message extension.
      */
     protected FreeStyleProject configureGitTagMessageJob(String refSpec, String branchSpec, boolean useMostRecentTag) throws Exception {
+        GitTagMessageExtension extension = new GitTagMessageExtension();
+        extension.setUseMostRecentTag(useMostRecentTag);
         UserRemoteConfig remote = new UserRemoteConfig(repoDir.getRoot().getAbsolutePath(), "origin", refSpec, null);
         GitSCM scm = new GitSCM(
                 Collections.singletonList(remote),
                 Collections.singletonList(new BranchSpec(branchSpec)),
                 false, Collections.<SubmoduleConfig>emptyList(),
                 null, null,
-                Collections.<GitSCMExtension>singletonList(new GitTagMessageExtension(useMostRecentTag)));
+                Collections.<GitSCMExtension>singletonList(extension));
 
         FreeStyleProject job = jenkins.createFreeStyleProject();
         job.getBuildersList().add(new Shell("echo \"tag='${" + ENV_VAR_NAME_TAG + "}'\""));

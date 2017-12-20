@@ -112,7 +112,8 @@ public class GitTagMessageExtension extends GitSCMExtension {
             build.addAction(new GitTagMessageAction(tagName, tagMessage));
         } catch (StringIndexOutOfBoundsException e) {
             // git-client currently throws this exception if you ask for the message of a non-existent tag
-            LOGGER.info(String.format("No tag message exists for '%s'.", tagName));
+            listener.getLogger().println(Messages.NoTagInfoFound(tagName));
+            LOGGER.info(String.format("No tag exists for '%s'.", tagName));
         }
     }
 

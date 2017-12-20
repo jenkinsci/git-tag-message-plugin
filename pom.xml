@@ -8,7 +8,7 @@
     <relativePath />
   </parent>
   <artifactId>git-tag-message</artifactId>
-  <version>1.6-SNAPSHOT</version>
+  <version>1.6</version>
   <packaging>hpi</packaging>
 
   <properties>
@@ -102,7 +102,7 @@
     <connection>scm:git:git://github.com/jenkinsci/git-tag-message-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/git-tag-message-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/git-tag-message-plugin</url>
-    <tag>HEAD</tag>
+    <tag>git-tag-message-1.6</tag>
   </scm>
 
 </project>

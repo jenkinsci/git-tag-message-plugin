@@ -28,7 +28,7 @@ import static org.jenkinsci.plugins.gittagmessage.GitTagMessageAction.ENV_VAR_NA
 public class GitTagMessageExtension extends GitSCMExtension {
 
     private static final Logger LOGGER = Logger.getLogger(GitTagMessageExtension.class.getName());
-    private static final Pattern TAG_OFFSET_MATCHER = Pattern.compile("(?<tag>.+)-[0-9]+-g[0-9A-Fa-f]{7}$");
+    private static final Pattern TAG_OFFSET_MATCHER = Pattern.compile("(?<tag>.+)-[0-9]+-g[0-9A-Fa-f]{7,}$");
 
     private boolean useMostRecentTag;
 

@@ -1,5 +1,13 @@
 # Version history
 
+## 1.7
+April 25, 2020
+
+- Updated git-plugin dependency
+- Increased Jenkins requirement to 2.60.3
+  - Thanks to [René Scheibe](https://github.com/darxriggs)
+- Migrated documentation and changelog to GitHub, as the Jenkins wiki is deprecated
+
 ## 1.6.1
 December 24, 2017
 
@@ -45,3 +53,4 @@ October 31, 2014
 October 22, 2014
 
 - Initial release
+

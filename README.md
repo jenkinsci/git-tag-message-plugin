@@ -16,6 +16,9 @@ You can optionally choose the "use most recent tag" option, which will
 then export the tag name and message from the nearest tag in the history
 of the commit being built, if any.
 
+## Requirements
+Jenkins [version 2.60.3](https://jenkins.io/changelog-stable#v2.60.3) or newer is required.
+
 ## Usage
 
 ### Freestyle
@@ -77,7 +80,7 @@ boolean isTag(String desc) {
 
 ## Example
 
-At [iosphere](https://iosphere.de/), we used this in the process of automatically building and distributing beta versions of our mobile apps:
+One example usage of this plugin is in the process of automatically building and distributing beta versions of mobile apps:
 
 1.  Commit some code
 2.  Write or generate release notes, e.g. `./generateChangelog.sh > /tmp/changes`
@@ -90,9 +93,9 @@ Jenkins would then, having received a Git webhook notification:
 2.  Check out the committed code, i.e. the revision at tag `beta/123`
 3.  Export a `GIT_TAG_MESSAGE` variable — this will contain the release notes attached to the tag
 4.  Build the mobile app
-5.  Use the `${GIT_TAG_MESSAGE}` value to fill out the release notes text field in a post-build distribution step, e.g. [Google Play Android Publisher
-    plugin](https://plugins.jenkins.io/google-play-android-publisher)
+5.  Use the `${GIT_TAG_MESSAGE}` value to fill out the release notes text field in a post-build distribution step, e.g. [Google Play Android Publisher plugin](https://plugins.jenkins.io/google-play-android-publisher)
 6.  Upload and deploy the app to the relevant service for distribution to users
 
 ## Changelog
 See [CHANGELOG.md](https://github.com/jenkinsci/git-tag-message-plugin/blob/master/CHANGELOG.md).
+

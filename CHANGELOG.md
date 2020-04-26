@@ -1,5 +1,11 @@
 # Version history
 
+## 1.7.1
+April 26, 2020
+
+- Migrated documentation and changelog to GitHub, as the Jenkins wiki is deprecated
+  - Updated POM to point Jenkins to this documentation (as I forgot to do so in the previous release)
+
 ## 1.7
 April 25, 2020
 

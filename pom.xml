@@ -16,8 +16,8 @@
   </properties>
 
   <name>Git Tag Message Plugin</name>
-  <url>https://wiki.jenkins.io/display/JENKINS/Git+Tag+Message+Plugin</url>
-  <description>Exports the message for a git tag as an environment variable during a build.</description>
+  <url>https://github.com/jenkinsci/git-tag-message-plugin</url>
+  <description>Exports the name and message for a Git tag as environment variables during a Freestyle build.</description>
 
   <developers>
     <developer>
